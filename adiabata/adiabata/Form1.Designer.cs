@@ -32,7 +32,6 @@ namespace adiabata
          this.openGLControl1 = new SharpGL.OpenGLControl();
          this.label1 = new System.Windows.Forms.Label();
          this.splitter1 = new System.Windows.Forms.Splitter();
-         this.splitter2 = new System.Windows.Forms.Splitter();
          this.trackBar1 = new System.Windows.Forms.TrackBar();
          this.trackBar2 = new System.Windows.Forms.TrackBar();
          this.trackBar3 = new System.Windows.Forms.TrackBar();
@@ -47,6 +46,7 @@ namespace adiabata
          this.label10 = new System.Windows.Forms.Label();
          this.button1 = new System.Windows.Forms.Button();
          this.button2 = new System.Windows.Forms.Button();
+         this.Cons = new System.Windows.Forms.Label();
          ((System.ComponentModel.ISupportInitialize)(this.openGLControl1)).BeginInit();
          ((System.ComponentModel.ISupportInitialize)(this.trackBar1)).BeginInit();
          ((System.ComponentModel.ISupportInitialize)(this.trackBar2)).BeginInit();
@@ -55,14 +55,23 @@ namespace adiabata
          // 
          // openGLControl1
          // 
-         this.openGLControl1.DrawFPS = false;
-         this.openGLControl1.Location = new System.Drawing.Point(0, 0);
+         this.openGLControl1.DrawFPS = true;
+         this.openGLControl1.FrameRate = 100;
+         this.openGLControl1.Location = new System.Drawing.Point(9, 0);
          this.openGLControl1.Name = "openGLControl1";
-         this.openGLControl1.OpenGLVersion = SharpGL.Version.OpenGLVersion.OpenGL2_1;
+         this.openGLControl1.OpenGLVersion = SharpGL.Version.OpenGLVersion.OpenGL3_0;
          this.openGLControl1.RenderContextType = SharpGL.RenderContextType.DIBSection;
          this.openGLControl1.RenderTrigger = SharpGL.RenderTrigger.TimerBased;
-         this.openGLControl1.Size = new System.Drawing.Size(878, 646);
+         this.openGLControl1.Size = new System.Drawing.Size(869, 646);
          this.openGLControl1.TabIndex = 0;
+         this.openGLControl1.OpenGLDraw += new SharpGL.RenderEventHandler(this.openGLControl1_OpenGLDraw_1);
+         this.openGLControl1.Load += new System.EventHandler(this.openGLControl1_Load);
+         this.openGLControl1.KeyDown += new System.Windows.Forms.KeyEventHandler(this.openGLControl1_KeyDown);
+         this.openGLControl1.KeyUp += new System.Windows.Forms.KeyEventHandler(this.openGLControl1_KeyUp);
+         this.openGLControl1.MouseDown += new System.Windows.Forms.MouseEventHandler(this.openGLControl1_MouseDown);
+         this.openGLControl1.MouseLeave += new System.EventHandler(this.openGLControl1_MouseLeave);
+         this.openGLControl1.MouseMove += new System.Windows.Forms.MouseEventHandler(this.openGLControl1_MouseMove);
+         this.openGLControl1.MouseUp += new System.Windows.Forms.MouseEventHandler(this.openGLControl1_MouseUp);
          // 
          // label1
          // 
@@ -81,14 +90,6 @@ namespace adiabata
          this.splitter1.Size = new System.Drawing.Size(3, 650);
          this.splitter1.TabIndex = 2;
          this.splitter1.TabStop = false;
-         // 
-         // splitter2
-         // 
-         this.splitter2.Location = new System.Drawing.Point(3, 0);
-         this.splitter2.Name = "splitter2";
-         this.splitter2.Size = new System.Drawing.Size(8, 650);
-         this.splitter2.TabIndex = 3;
-         this.splitter2.TabStop = false;
          // 
          // trackBar1
          // 
@@ -222,11 +223,20 @@ namespace adiabata
          this.button2.Text = "Начать  эксперимент";
          this.button2.UseVisualStyleBackColor = true;
          // 
+         // Cons
+         // 
+         this.Cons.AutoSize = true;
+         this.Cons.Location = new System.Drawing.Point(939, 316);
+         this.Cons.Name = "Cons";
+         this.Cons.Size = new System.Drawing.Size(0, 13);
+         this.Cons.TabIndex = 18;
+         // 
          // Form1
          // 
          this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
          this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
          this.ClientSize = new System.Drawing.Size(1464, 650);
+         this.Controls.Add(this.Cons);
          this.Controls.Add(this.button2);
          this.Controls.Add(this.button1);
          this.Controls.Add(this.label10);
@@ -241,7 +251,6 @@ namespace adiabata
          this.Controls.Add(this.trackBar3);
          this.Controls.Add(this.trackBar2);
          this.Controls.Add(this.trackBar1);
-         this.Controls.Add(this.splitter2);
          this.Controls.Add(this.splitter1);
          this.Controls.Add(this.label1);
          this.Controls.Add(this.openGLControl1);
@@ -261,7 +270,6 @@ namespace adiabata
       private SharpGL.OpenGLControl openGLControl1;
       private System.Windows.Forms.Label label1;
       private System.Windows.Forms.Splitter splitter1;
-      private System.Windows.Forms.Splitter splitter2;
       private System.Windows.Forms.TrackBar trackBar1;
       private System.Windows.Forms.TrackBar trackBar2;
       private System.Windows.Forms.TrackBar trackBar3;
@@ -276,6 +284,7 @@ namespace adiabata
       private System.Windows.Forms.Label label10;
       private System.Windows.Forms.Button button1;
       private System.Windows.Forms.Button button2;
+      private System.Windows.Forms.Label Cons;
    }
 }
 
