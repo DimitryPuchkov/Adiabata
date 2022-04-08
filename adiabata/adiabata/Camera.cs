@@ -3,46 +3,47 @@ using System.Collections.Generic;
 using System.Text;
 using SharpGL;
 using static SharpGL.OpenGL;
+using GlmNet;
 
 namespace adiabata
 {
    class Camera
    {
       OpenGL gl;
-      private double xalfa;
-      private double zalfa;
-      private double X;
-      private double Y;
-      public double Speed;
-      public double Fi{ get; set; }
-      public double Xalfa 
+      private float xalfa;
+      private float zalfa;
+      private float X;
+      private float Y;
+      public float Speed;
+      public float Fi{ get; set; }
+      public float Xalfa 
       {
          get => xalfa;
          set
          {
-            if (value > 360)
-               xalfa = value - 360;
-            else if (value < -360)
-               xalfa = value + 360;
+            if (value > (float)Math.PI * 2)
+               xalfa = value - (float)Math.PI * 2;
+            else if (value < -(float)Math.PI * 2)
+               xalfa = value + (float)Math.PI * 2;
             else
                xalfa = value;
          } 
       }
-      public double Zalfa 
+      public float Zalfa 
       {
          get => zalfa;
          set
          {
-            if (value > 360)
-               zalfa = value - 360;
-            else if (zalfa < -360)
-               zalfa = value + 360;
+            if (value > (float)Math.PI * 2)
+               zalfa = value - (float)Math.PI * 2;
+            else if (zalfa < -(float)Math.PI * 2)
+               zalfa = value + (float)Math.PI * 2;
             else
                zalfa = value;
          }
       }
 
-      public Camera(OpenGL gl, double xalfa, double zalfa)
+      public Camera(OpenGL gl, float xalfa, float zalfa)
       {
          this.gl = gl;
          Xalfa = xalfa;
@@ -50,15 +51,17 @@ namespace adiabata
          X = 0;
          Y = 0;
       }
-      public void Move()
+      public mat4 Move(mat4 viewMatrix)
       {
-         double fi = -Zalfa / 180 * Math.PI;
-         fi += Fi;
-         X += Math.Sin(fi) * Speed;
-         Y += Math.Cos(fi) * Speed;
-         gl.Rotate(-Xalfa, 1, 0, 0);
-         gl.Rotate(-Zalfa, 0, 0, 1);
-         gl.Translate(-X, -Y, -3);
+         float fi = -Zalfa / 180 * (float)Math.PI;
+         //fi += Fi;
+         X += (float)Math.Sin(fi) * Speed;
+         Y += (float)Math.Cos(fi) * Speed;
+         viewMatrix = glm.rotate(viewMatrix, -Xalfa, new vec3(1.0f, 0.0f, 0.0f));
+         viewMatrix = glm.rotate(viewMatrix, -Zalfa, new vec3(0.0f, 0.0f, 1.0f));
+         viewMatrix = glm.translate(viewMatrix, new vec3(-X, -Y, -3.0f));
+         //Fi = 0;
+         return viewMatrix;
       }
 
    }

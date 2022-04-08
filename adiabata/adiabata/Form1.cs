@@ -17,7 +17,8 @@ using SharpGL.SceneGraph.Primitives;
 using Index = SharpGL.SceneGraph.Index;
 using static SharpGL.OpenGL;
 using static adiabata.Functions;
-
+using GlmNet;
+using SharpGL.Shaders;
 
 
 namespace adiabata
@@ -27,17 +28,29 @@ namespace adiabata
       OpenGL gl;
       Camera camera;
       List<int> PositionStart = new List<int> { -1, -1 };
-      double rotationSpeed = 0.15f;
-      SharpGL.Serialization.Wavefront.ObjFileFormat model = new SharpGL.Serialization.Wavefront.ObjFileFormat();
-      Polygon table;
-      Polygon kolba;
-      Polygon klapan;
-      Polygon manometr;
-      //Polygon pump, pump_handle;
-      Pump pump;
-      Texture tableTex = new Texture();
-      Texture klapanTex = new Texture();
-      Bitmap Image, Image1, Image2;
+      float rotationSpeed = 0.005f;
+      mat4 projectionMatrix;
+      mat4 viewMatrix;
+      mat4 modelMatrix;
+
+      vec3 cameraPos = new vec3(0.0f, -2.0f, 3.0f);
+      vec3 cameraFront = new vec3(0.0f, 0.0f, -1.0f);
+      vec3 cameraUp = new vec3(0.0f, 1.0f, 0.0f);
+      bool firstMouse = true;
+      float yaw = -90.0f;  // yaw is initialized to -90.0 degrees since a yaw of 0.0 results in a direction vector pointing to the right so we initially rotate a bit to the left.
+      float pitch = 0.0f;
+      float lastX = 800.0f / 2.0f;
+      float lastY = 600.0f / 2.0f;
+      float fov = 45.0f;
+
+
+      LoaderModel table;
+      LoaderModel pump;
+      ColorModel kolba;
+
+      float Xalfa, Zalfa, X, Y;
+      ShaderProgram TextShader; // шейдер для отрисовки объектов с текстурами
+      ShaderProgram ColorShader; // шейдер для отрисовки объектов определенным цветом
       public Form1()
       {
          InitializeComponent();
@@ -56,122 +69,72 @@ namespace adiabata
       private void openGLControl1_Load(object sender, EventArgs e)
       {
          gl = this.openGLControl1.OpenGL;
-         camera = new Camera(gl, 50, 0);
-         gl.Enable(GL_DEPTH_TEST);
          gl.Enable(GL_BLEND);
          gl.BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-         gl.Frustum(-1, 1, -1, 1, 2, 8);
-         table = LoadData("table.obj");
-         kolba = LoadData("kolba.obj");
-         manometr = LoadData("man.obj");
-         pump = new Pump(gl, "pump.obj", "pump_handle.obj", "2.jpg");
-         //pump = LoadData("pump.obj");
-         //pump_handle = LoadData("pump_handle.obj");
-         klapan = LoadData("klapan.obj");
-         Image = new Bitmap("1.jpg");
-         tableTex.Create(gl, Image);
-         Image1 = new Bitmap("2.jpg");
-         klapanTex.Create(gl, Image1);
-         //this.openGLControl1.
-         //Scene a = new Scene();
-         // Cons.Text = a.ToString();
+         Xalfa = 0.0f; Zalfa = 0.0f;
+         X = 0; Y = 0;
+         gl.Enable(GL_DEPTH_TEST);
+         var vertexShaderSource = ManifestResourceLoader.LoadTextFile("Shader.vert");
+         var fragmentShaderSource = ManifestResourceLoader.LoadTextFile("Shader.frag");
+         TextShader = new ShaderProgram();
+         TextShader.Create(gl, vertexShaderSource, fragmentShaderSource, null);
+         TextShader.AssertValid(gl);
+         var vertexShaderSource1 = ManifestResourceLoader.LoadTextFile("Col.vert");
+         var fragmentShaderSource1 = ManifestResourceLoader.LoadTextFile("Col.frag");
+         ColorShader = new ShaderProgram();
+         ColorShader.Create(gl, vertexShaderSource1, fragmentShaderSource1, null);
+         ColorShader.AssertValid(gl);
+
+         //  Create a perspective projection matrix.
+         const float rads = (60.0f / 360.0f) * (float)Math.PI * 2.0f;
+         projectionMatrix = glm.perspective(rads, Width / Height, 0.1f, 100.0f);
+
+         //  Create a view matrix to move us back a bit.
+         viewMatrix = glm.translate(new mat4(1.0f), new vec3(0.0f, 0.0f, -3.0f));
+
+         //  Create a model matrix to make the model a little bigger.
+         modelMatrix = glm.scale(new mat4(1.0f), new vec3(2.5f));
+
+         table = new LoaderModel(gl, "table.obj", "1.jpg", 1);
+         pump = new LoaderModel(gl, "pump.obj", "2.jpg", 2);
+         kolba = new ColorModel(gl, "kolba.obj", new vec4(1.0f, 1.0f, 1.0f, 0.6f), 3);         
+         
       }
 
       private void openGLControl1_OpenGLDraw_1(object sender, SharpGL.RenderEventArgs args)
       {
          gl.ClearColor(0.369f, 0.8f, 0.949f, 1); // Цвет очистки экрана
          gl.Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // очистка буфера цвета и глубины
-         gl.LoadIdentity(); // загружаем единичную матрицу
+        
+         TextShader.Bind(gl);
+         viewMatrix = glm.lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
+         TextShader.SetUniformMatrix4(gl, "projectionMatrix", projectionMatrix.to_array());
+         TextShader.SetUniformMatrix4(gl, "viewMatrix", viewMatrix.to_array());
+         TextShader.SetUniformMatrix4(gl, "modelMatrix", modelMatrix.to_array());
+         gl.Enable(GL_DEPTH_TEST);
+         mat4 view1 = glm.rotate(viewMatrix, glm.radians(90.0f), new vec3(1.0f, 0.0f, 0.0f));
+         TextShader.SetUniformMatrix4(gl, "viewMatrix", view1.to_array());
+         table.Draw();
 
-         camera.Move();
 
-         //for (int i = -5; i < 5; i++)
-         //   for (int j = -5; j < 5; j++)
-         //   {
-         //      gl.PushMatrix();
-         //      if ((i + j) % 2 == 0) gl.Color(0, 0.5, 0);
-         //      else gl.Color(1.0f, 1.0f, 1.0f);
-         //      gl.Translate(i * 2, j * 2, 0);
-         //      gl.Begin(OpenGL.GL_TRIANGLE_FAN);
-         //      gl.Vertex(1, 1, 0);
-         //      gl.Vertex(1, -1, 0);
-         //      gl.Vertex(-1, -1, 0);
-         //      gl.Vertex(-1, 1, 0);
-         //      gl.End();
-         //      gl.PopMatrix();
-         //   }
-         gl.Enable(OpenGL.GL_TEXTURE_2D);
-         //Отрисовка стола
-         tableTex.Bind(gl);
-         gl.PushMatrix();
-         gl.Translate(0, 2, 0);
-         gl.Rotate(90.0, 1, 0, 0);
-         gl.Scale(2, 2, 3);
-         gl.Color(1.0, 1.0, 1.0);
-         gl.Begin(GL_QUADS);
-         for (int i = 0; i < table.Faces.Count; i++)
-         {
-            gl.TexCoord(table.UVs[table.Faces[i].Indices[0].UV]);   gl.Vertex(table.Vertices[table.Faces[i].Indices[0].Vertex]);
-            gl.TexCoord(table.UVs[table.Faces[i].Indices[1].UV]);   gl.Vertex(table.Vertices[table.Faces[i].Indices[1].Vertex]);
-            gl.TexCoord(table.UVs[table.Faces[i].Indices[2].UV]);   gl.Vertex(table.Vertices[table.Faces[i].Indices[2].Vertex]);
-            gl.TexCoord(table.UVs[table.Faces[i].Indices[3].UV]);   gl.Vertex(table.Vertices[table.Faces[i].Indices[3].Vertex]);
-         }
-         gl.End();
-         //Отрисовка колбы
-         gl.Disable(GL_TEXTURE_2D);
-         gl.Translate(0, 0.82, 0);
-         gl.Begin(GL_QUADS);
-         gl.Color(0.9, 0.9, 0.9, 0.5);
-         for (int i = 0; i < kolba.Faces.Count; i++)
-         {
-            gl.Vertex(kolba.Vertices[kolba.Faces[i].Indices[0].Vertex]);
-            gl.Vertex(kolba.Vertices[kolba.Faces[i].Indices[1].Vertex]);
-            gl.Vertex(kolba.Vertices[kolba.Faces[i].Indices[2].Vertex]);
-            gl.Vertex(kolba.Vertices[kolba.Faces[i].Indices[3].Vertex]);
-         }
-         gl.End();
+         //отрисовка колбы
+         view1 = glm.translate(view1, new vec3(0.0f, 2.0f, 0.0f));
+         view1 = glm.rotate(view1, glm.radians(180.0f), new vec3(0.0f, 1.0f, 0.0f));
+         //TextShader.SetUniformMatrix4(gl, "viewMatrix", view1.to_array());
+         ColorShader.Bind(gl);
+         ColorShader.SetUniformMatrix4(gl, "projectionMatrix", projectionMatrix.to_array());
+         ColorShader.SetUniformMatrix4(gl, "viewMatrix", view1.to_array());
+         ColorShader.SetUniformMatrix4(gl, "modelMatrix", modelMatrix.to_array());
+         gl.Enable(GL_DEPTH_TEST);
+         kolba.Draw();
 
-         //Отрисовка клапана
-         gl.Enable(GL_TEXTURE_2D);
-         klapanTex.Bind(gl);
-         gl.PushMatrix();
-         gl.Translate(0, 0.25, 0);
-         gl.Begin(GL_QUADS);
-         gl.Color(0.9, 0.9, 0.9);
-         for (int i = 0; i < klapan.Faces.Count; i++)
-         {
-            gl.Vertex(klapan.Vertices[klapan.Faces[i].Indices[0].Vertex]);
-            gl.Vertex(klapan.Vertices[klapan.Faces[i].Indices[1].Vertex]);
-            gl.Vertex(klapan.Vertices[klapan.Faces[i].Indices[2].Vertex]);
-            gl.Vertex(klapan.Vertices[klapan.Faces[i].Indices[3].Vertex]);
-         }
-         gl.End();
-         
-
-         // Отрисовка манометра
-         gl.Disable(GL_TEXTURE_2D);
-         //gl.Translate(0, 0.8, 0);
-         gl.Rotate(50, 0, 1, 0);
-         gl.Translate(-0.1, -0.08, 0.08);
-         gl.Scale(0.02, 0.02, 0.02);
-         gl.Color(0.9, 0.9, 0.9, 0.8);
-         for (int i = 0; i < manometr.Faces.Count; i++)
-         {
-            gl.Begin(GL_POLYGON);
-            for (int j = 0; j < manometr.Faces[i].Count; j++)
-               gl.Vertex(manometr.Vertices[manometr.Faces[i].Indices[j].Vertex]);
-            gl.End();
-         }
-         gl.PopMatrix();
-         //Отрисовка Насоса
-
-         gl.Translate(0.2, -0.1, 0);
+         TextShader.Bind(gl);
+         //var view2 = gl,;
+         mat4 mod1 = glm.scale(new mat4(1.0f), new vec3(0.3f));
+         TextShader.SetUniformMatrix4(gl, "viewMatrix", view1.to_array());
+         TextShader.SetUniformMatrix4(gl, "modelMatrix", mod1.to_array());
          pump.Draw();
-         gl.PopMatrix();
-
-
-
-
+         
 
 
          gl.Flush();
@@ -181,22 +144,15 @@ namespace adiabata
       {
          switch (e.KeyValue)
          {
-            case 'W': { camera.Speed = 0.1; camera.Fi = 0; } break;
-            case 'S': { camera.Speed = 0.1; camera.Fi = Math.PI; } break;
-            case 'A': { camera.Speed = 0.1; camera.Fi = -0.5 * Math.PI; } break;
-            case 'D': { camera.Speed = 0.1; camera.Fi = +0.5 * Math.PI; } break;
+            case 'W': { cameraPos += 0.1f * cameraFront; } break;
+            case 'S': { cameraPos -= 0.1f * cameraFront; } break;
+            case 'A': { cameraPos -= glm.normalize(glm.cross(cameraFront, cameraUp)) * 0.1f; } break;
+            case 'D': { cameraPos += glm.normalize(glm.cross(cameraFront, cameraUp)) * 0.1f; } break;
          }
       }
 
       private void openGLControl1_KeyUp(object sender, KeyEventArgs e)
       {
-         switch (e.KeyValue)
-         {
-            case 'W': { camera.Speed = 0; camera.Fi = 0; } break;
-            case 'S': { camera.Speed = 0; camera.Fi = 0; } break;
-            case 'A': { camera.Speed = 0; camera.Fi = 0; } break;
-            case 'D': { camera.Speed = 0; camera.Fi = 0; } break;
-         }
       }
 
       private void openGLControl1_MouseDown(object sender, MouseEventArgs e)
@@ -211,19 +167,38 @@ namespace adiabata
 
       private void openGLControl1_MouseLeave(object sender, EventArgs e)
       {
-         //PositionStart[0] = -1;
-         //PositionStart[1] = -1;
+         PositionStart[0] = -1;
+         PositionStart[1] = -1;
          Cons.Text += "\nLeave\n";
       }
 
       private void openGLControl1_MouseMove(object sender, MouseEventArgs e)
-      { 
-         if(PositionStart[0] != -1 && PositionStart[0] != -1)
+      {
+         if (PositionStart[0] != -1 && PositionStart[0] != -1)
          {
-            camera.Xalfa += (e.Y - PositionStart[1]) * rotationSpeed;
-            camera.Zalfa += (e.X - PositionStart[0]) * rotationSpeed;
+
+            float xoffset = PositionStart[0] - e.X;
+            float yoffset = e.Y - PositionStart[1]; // reversed since y-coordinates go from bottom to top
             PositionStart[0] = e.X;
             PositionStart[1] = e.Y;
+            float sensitivity = 0.1f; // change this value to your liking
+            xoffset *= sensitivity;
+            yoffset *= sensitivity;
+
+            yaw += xoffset;
+            pitch += yoffset;
+
+            // make sure that when pitch is out of bounds, screen doesn't get flipped
+            if (pitch > 89.0f)
+               pitch = 89.0f;
+            if (pitch < -89.0f)
+               pitch = -89.0f;
+
+            vec3 front;
+            front.x = (float)(Math.Cos(glm.radians(yaw)) * Math.Cos(glm.radians(pitch)));
+            front.y = (float)Math.Sin(glm.radians(pitch));
+            front.z = (float)(Math.Sin(glm.radians(yaw)) * Math.Cos(glm.radians(pitch)));
+            cameraFront = glm.normalize(front);
          }
       }
 
@@ -233,71 +208,5 @@ namespace adiabata
          PositionStart[1] = -1;
       }
 
-      //Polygon LoadData(string name)
-      //{
-      //   string line;
-      //   Polygon polygon = new Polygon();
-      //   using (StreamReader reader = new StreamReader(name))
-      //   {
-      //      while ((line = reader.ReadLine()) != null)
-      //      {
-      //         //  Do we have a texture coordinate?
-      //         if (line.StartsWith("vt"))
-      //         {
-      //            //  Get the texture coord strings.
-      //            string[] values = line.Split(' ');
-      //            float x = float.Parse(values[1], CultureInfo.InvariantCulture);
-      //            float y = float.Parse(values[2], CultureInfo.InvariantCulture);
-
-      //            //  Parse texture coordinates.
-      //            float u = x;
-      //            float v = 1.0f - y;
-
-      //            //  Add the texture coordinate.
-      //            polygon.UVs.Add(new UV(u, v));
-      //            continue;
-      //         }
-
-      //         //  Do we have a normal coordinate?
-      //         if (line.StartsWith("v "))
-      //         {
-      //            //  Get the normal coord strings.
-      //            string[] values = line.Split(' ');
-
-      //            //  Parse normal coordinates.
-      //            float x = float.Parse(values[1], CultureInfo.InvariantCulture);
-      //            float y = float.Parse(values[2], CultureInfo.InvariantCulture);
-      //            float z = float.Parse(values[3], CultureInfo.InvariantCulture);
-
-      //            //  Add the normal.
-      //            polygon.Vertices.Add(new Vertex(x, y, z));
-      //            continue;
-      //         }
-      //         if (line.StartsWith("f"))
-      //         {
-      //            Face face = new Face();
-      //            string[] indices = line.Substring(2).Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-
-
-      //            foreach (var index in indices)
-      //            {
-
-      //               string[] parts = index.Split(new char[] { '/' }, StringSplitOptions.None);
-
-      //               face.Indices.Add(new Index(
-      //                   (parts.Length > 0 && parts[0].Length > 0) ? int.Parse(parts[0], CultureInfo.InvariantCulture) - 1 : -1,
-      //                   (parts.Length > 1 && parts[1].Length > 0) ? int.Parse(parts[1], CultureInfo.InvariantCulture) - 1 : -1,
-      //                   (parts.Length > 2 && parts[2].Length > 0) ? int.Parse(parts[2], CultureInfo.InvariantCulture) - 1 : -1));
-      //            }
-
-      //            //  Add the face.
-      //            polygon.Faces.Add(face);
-      //            continue;
-      //         }
-      //      }
-
-      //   }
-      //   return polygon;
-      //}
    }
 }

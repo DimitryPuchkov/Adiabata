@@ -59,8 +59,8 @@ namespace adiabata
          this.openGLControl1.FrameRate = 100;
          this.openGLControl1.Location = new System.Drawing.Point(9, 0);
          this.openGLControl1.Name = "openGLControl1";
-         this.openGLControl1.OpenGLVersion = SharpGL.Version.OpenGLVersion.OpenGL3_0;
-         this.openGLControl1.RenderContextType = SharpGL.RenderContextType.DIBSection;
+         this.openGLControl1.OpenGLVersion = SharpGL.Version.OpenGLVersion.OpenGL4_4;
+         this.openGLControl1.RenderContextType = SharpGL.RenderContextType.NativeWindow;
          this.openGLControl1.RenderTrigger = SharpGL.RenderTrigger.TimerBased;
          this.openGLControl1.Size = new System.Drawing.Size(869, 646);
          this.openGLControl1.TabIndex = 0;
